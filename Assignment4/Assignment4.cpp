@@ -65,8 +65,6 @@ Color3f inSet(0.0f,0.0f,0.0f); // If the point is in the set: black
 
 // ----------------------
 
-// TODO #1: COMPLETE THE MISSING FUNCTIONS
-
 // Transforms an index of the array (which is a flattened matrix of imageWidth * imageWeight) to its position <x,y> within the plane
 // Notice: the cells of the matrix are evenly distributed in the x axis from [left, right] and in the y axis from [down, up]
 // Note: Technically, since we will be filling the array from top-to-bottom the lower "y" within the matrix should be the uppest value, but you can choose to ignore this.
@@ -103,9 +101,9 @@ std::pair<bool, std::size_t> evaluatePoint(const Complex& c, std::size_t iterati
 	return std::pair<bool, std::size_t>(true, 0);
 }
 
-void plotMandelbrotSection(uint8_t* image, size_t startIndex, size_t count, std::size_t width, std::size_t height, float left, float right, float up, float down, std::size_t iterations)
+void plotMandelbrotSection(uint8_t* image, size_t startIndex, size_t upperBound, std::size_t width, std::size_t height, float left, float right, float up, float down, std::size_t iterations)
 {
-	for (std::size_t i = startIndex; i < startIndex + count && i < (width * height); ++i) {
+	for (std::size_t i = startIndex; i < upperBound; ++i) {
 		Complex point(getPosition(i, width, height, left, right, up, down));
 		std::pair<bool, std::size_t> evaluation(evaluatePoint(point, iterations));
 		// ---- Preferably, do not edit the code inside
@@ -134,21 +132,39 @@ void plotMandelbrotSection(uint8_t* image, size_t startIndex, size_t count, std:
 	}
 }
 
-// TODO #2: MODIFY THIS FUNCTION SO THAT IT TAKES ADVANTAGE OF THREADING WITHIN THE COMPUTER, it should work with the specified number of threads
 uint8_t* plotMandelbrot(unsigned int threads, std::size_t width, std::size_t height, float left, float right, float up, float down, std::size_t iterations){
 	uint8_t* image = new uint8_t[width * height * 3];
 	std::jthread* threadarr = new std::jthread[threads];
 	int count = std::ceil(width * height / (float)threads);
+	size_t totalPixels = width * height;
 	for (size_t i = 0; i < threads; i++)
 	{
 		size_t startIndex = i * count;
-		threadarr[i] = std::jthread(plotMandelbrotSection, image, startIndex, count, width, height, left, right, up, down, iterations);
+		size_t upperBound = std::min(startIndex + count, totalPixels);
+		threadarr[i] = std::jthread(plotMandelbrotSection, image, startIndex, upperBound, width, height, left, right, up, down, iterations);
 	}
 	
 	delete [] threadarr;
 
 	return image;
 }
+
+/*
+
+Part 4 (Performance results):
+
+Calling single threaded plot
+Finished calculating the Mandelbrot set in single thread; time taken: 180281 ms
+Calling multi threaded plot with: 10 threads
+Finished calculating the Mandelbrot set in multithread; time taken: 46353 ms
+
+I got much better performance using the multiple threads. However, it wasn't as 
+much as I was expecting, I would have expected to get almost 10 times the performance 
+since it was using 10 threads, but my performance was closer to 4 times faster. The 
+main lesson/takeaway for me here is that you can't expect your performance gains to 
+correspond directly to the number of threads you use, the overhead and other factors
+can make you not gain as much time as you would hope.
+*/
 
 
 // ----------------------
